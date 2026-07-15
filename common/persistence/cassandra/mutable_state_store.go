@@ -811,6 +811,25 @@ func (d *MutableStateStore) ConflictResolveWorkflowExecution(
 			currentRunID,
 		)
 
+	case p.ConflictResolveWorkflowModeCreateCurrent:
+		// The prior current record was deleted; insert a brand-new one pointing at the new
+		// workflow. currentRunID stays "" so the not-applied path reports the IF NOT EXISTS
+		// conflict rather than a run-id CAS mismatch.
+		batch.Query(templateCreateCurrentWorkflowExecutionQuery,
+			shardID,
+			rowTypeExecution,
+			namespaceID,
+			workflowID,
+			currentRecordRunID,
+			defaultVisibilityTimestamp,
+			rowTypeExecutionTaskID,
+			newWorkflow.ExecutionState.RunId,
+			newWorkflow.ExecutionStateBlob.Data,
+			newWorkflow.ExecutionStateBlob.EncodingType.String(),
+			newWorkflow.LastWriteVersion,
+			newWorkflow.ExecutionState.State,
+		)
+
 	default:
 		return serviceerror.NewInternalf("ConflictResolveWorkflowExecution: unknown mode: %v", request.Mode)
 	}

@@ -81,6 +81,11 @@ const (
 	// ConflictResolveWorkflowModeBypassCurrent conflict resolve workflow, without current record
 	// NOTE: current record CANNOT point to the workflow to be updated
 	ConflictResolveWorkflowModeBypassCurrent
+	// ConflictResolveWorkflowModeCreateCurrent conflict resolve workflow, inserting a brand-new
+	// current record pointing at the new workflow. Used when the prior current execution was
+	// deleted, so there is no current record to conditionally update.
+	// NOTE: requires a new workflow and no current workflow mutation.
+	ConflictResolveWorkflowModeCreateCurrent
 )
 
 // UnknownNumRowsAffected is returned when the number of rows that an API affected cannot be determined

@@ -284,6 +284,33 @@ func ValidateConflictResolveWorkflowModeState(
 		}
 		return nil
 
+	case ConflictResolveWorkflowModeCreateCurrent:
+		// insert a brand-new current record pointing at the new workflow
+		// * current workflow cannot be set
+		// * new workflow is required and becomes current
+		// * reset workflow cannot be created / running / zombie
+		// * new workflow cannot be zombie
+
+		// precondition
+		if currentWorkflowMutation != nil {
+			return serviceerror.NewInternalf("Invalid workflow conflict resolve mode %v, encountered current workflow", mode)
+		}
+		if newWorkflowState == nil {
+			return newInvalidConflictResolveWorkflowMode(mode, resetWorkflowState)
+		}
+
+		if resetWorkflowState == enumsspb.WORKFLOW_EXECUTION_STATE_CREATED ||
+			resetWorkflowState == enumsspb.WORKFLOW_EXECUTION_STATE_RUNNING ||
+			resetWorkflowState == enumsspb.WORKFLOW_EXECUTION_STATE_ZOMBIE ||
+			*newWorkflowState == enumsspb.WORKFLOW_EXECUTION_STATE_ZOMBIE {
+			return newInvalidConflictResolveWorkflowWithNewMode(
+				mode,
+				resetWorkflowState,
+				*newWorkflowState,
+			)
+		}
+		return nil
+
 	default:
 		return serviceerror.NewInternalf("unknown mode: %v", mode)
 	}

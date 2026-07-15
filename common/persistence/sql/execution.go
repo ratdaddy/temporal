@@ -541,6 +541,28 @@ func (m *sqlExecutionStore) conflictResolveWorkflowExecutionTx(
 			return err
 		}
 
+	case p.ConflictResolveWorkflowModeCreateCurrent:
+		// The prior current record was deleted; insert a brand-new one pointing at the new
+		// workflow. A duplicate-key error rolls back the whole transaction.
+		executionState := newWorkflow.ExecutionState
+		row := sqlplugin.CurrentExecutionsRow{
+			ShardID:          shardID,
+			NamespaceID:      namespaceID,
+			WorkflowID:       workflowID,
+			RunID:            primitives.MustParseUUID(executionState.RunId),
+			ArchetypeID:      request.ArchetypeID,
+			CreateRequestID:  executionState.CreateRequestId,
+			State:            executionState.State,
+			Status:           executionState.Status,
+			LastWriteVersion: newWorkflow.LastWriteVersion,
+			StartTime:        getStartTimeFromState(executionState),
+			Data:             newWorkflow.ExecutionStateBlob.Data,
+			DataEncoding:     newWorkflow.ExecutionStateBlob.EncodingType.String(),
+		}
+		if _, err := tx.InsertIntoCurrentExecutions(ctx, &row); err != nil {
+			return err
+		}
+
 	default:
 		return serviceerror.NewUnavailablef("ConflictResolveWorkflowExecution: unknown mode: %v", request.Mode)
 	}
